@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Poppins } from "next/font/google";
 import "./globals.css";
+import { ScreenGuard } from "@/components/ui/ScreenGuard";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -31,7 +32,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className={`${poppins.variable} antialiased`}>
-      <body>{children}</body>
+      <body>
+        <ScreenGuard />
+        {children}
+      </body>
     </html>
   );
 }

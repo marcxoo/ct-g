@@ -16,6 +16,20 @@
   --muted: #F3F2F1;
 }
 
+/* Protección: deshabilitar selección de texto y arrastre */
+* {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+input, textarea, [contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+img {
+  pointer-events: none;
+}
+
 body {
   background: var(--color-bg);
   color: var(--text-default);
