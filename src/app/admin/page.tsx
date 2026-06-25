@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft, Plus, Trash2, Save, Check,
-  ChevronRight, ChevronDown, X, Tag, List, FileText, DollarSign, BookOpen,
+  ChevronRight, ChevronDown, X, Tag, List, FileText, DollarSign, BookOpen, FileDown,
 } from 'lucide-react';
 import type { Category, Item } from '@/data/coffee-data';
 import ListEditor from '@/components/admin/ListEditor';
@@ -31,6 +31,7 @@ export default function AdminPage() {
   const [activeCatId, setActiveCatId] = useState('');
   const [loading,     setLoading]     = useState(true);
   const [saving,      setSaving]      = useState(false);
+  const [exporting,   setExporting]   = useState<null | 'word' | 'pdf'>(null);
   const [dirty,       setDirty]       = useState(false);
   const [toast,       setToast]       = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
 
@@ -136,6 +137,38 @@ export default function AdminPage() {
       showToast('err', 'No se pudo conectar');
     } finally {
       setSaving(false);
+    }
+  }
+
+  // ── exportar manual (Word / PDF) ────────────────────────────────────────────
+  async function exportManual(format: 'word' | 'pdf') {
+    if (exporting) return;
+    setExporting(format);
+    const ext  = format === 'word' ? 'docx' : 'pdf';
+    const path = format === 'word' ? '/api/export-word' : '/api/export-pdf';
+    try {
+      const res = await fetch(path, { cache: 'no-store' });
+      if (!res.ok) {
+        showToast('err', res.status === 403 ? 'Solo el admin puede exportar' : `Error generando el ${format === 'word' ? 'Word' : 'PDF'}`);
+        return;
+      }
+      const blob = await res.blob();
+      const cd   = res.headers.get('Content-Disposition') || '';
+      const match = /filename="?([^"]+)"?/.exec(cd);
+      const name = match?.[1] ?? `Manual-Coffee-Time-${new Date().toISOString().slice(0, 10)}.${ext}`;
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      showToast('ok', `${format === 'word' ? 'Word' : 'PDF'} descargado ✓`);
+    } catch {
+      showToast('err', 'No se pudo conectar');
+    } finally {
+      setExporting(null);
     }
   }
 
@@ -410,6 +443,26 @@ export default function AdminPage() {
               {loading ? 'Cargando…' : `${data.length} categorías · ${data.reduce((n, c) => n + c.items.length, 0)} ítems`}
             </p>
           </div>
+          <button
+            onClick={() => exportManual('word')}
+            disabled={!!exporting || loading}
+            title="Exportar todo el manual a Word (.docx) para impresión"
+            className="h-11 px-3 rounded-2xl flex items-center gap-1.5 text-sm font-bold text-white shrink-0 active:opacity-90 disabled:opacity-50"
+            style={{ background: '#144639' }}
+          >
+            <FileDown className="w-4 h-4" />
+            <span className="hidden sm:inline">{exporting === 'word' ? 'Generando…' : 'Word'}</span>
+          </button>
+          <button
+            onClick={() => exportManual('pdf')}
+            disabled={!!exporting || loading}
+            title="Exportar todo el manual a PDF para impresión"
+            className="h-11 px-3 rounded-2xl flex items-center gap-1.5 text-sm font-bold shrink-0 active:opacity-90 disabled:opacity-50 border-2"
+            style={{ color: '#144639', borderColor: '#144639', background: 'white' }}
+          >
+            <FileText className="w-4 h-4" />
+            <span className="hidden sm:inline">{exporting === 'pdf' ? 'Generando…' : 'PDF'}</span>
+          </button>
         </div>
       </header>
 

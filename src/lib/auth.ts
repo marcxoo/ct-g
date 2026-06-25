@@ -3,7 +3,10 @@
 
 export type Role = 'admin' | 'employee';
 export const SESSION_COOKIE = 'ct_session';
-const MAX_AGE = 60 * 60 * 12; // 12h en segundos
+// Duración máxima de inactividad antes de cerrar sesión.
+// Con renovación deslizante (ver proxy.ts), una sesión activa nunca caduca:
+// el token se re-emite en cada visita y la cuenta atrás se reinicia.
+export const MAX_AGE = 60 * 60 * 24 * 30; // 30 días en segundos
 
 export type Session = { user: string; role: Role; exp: number; sid?: string };
 

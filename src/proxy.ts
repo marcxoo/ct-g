@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { SESSION_COOKIE, verifySessionToken } from '@/lib/auth';
+import {
+  SESSION_COOKIE,
+  verifySessionToken,
+  createSessionToken,
+  sessionCookieOptions,
+  MAX_AGE,
+} from '@/lib/auth';
 
 // Rutas públicas (no requieren sesión)
 const PUBLIC_PATHS = ['/login', '/api/login'];
@@ -33,7 +39,17 @@ export async function proxy(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  return NextResponse.next();
+  // Sesión válida → renovación deslizante.
+  // Re-emitimos el token (reiniciando la cuenta atrás) cuando ya pasó más de
+  // la mitad de su vida. Así, mientras el usuario navega, la sesión nunca
+  // caduca; solo se cierra tras MAX_AGE de inactividad real.
+  const res = NextResponse.next();
+  const remaining = session.exp - Date.now() / 1000;
+  if (remaining < MAX_AGE / 2) {
+    const token = await createSessionToken(session.user, session.role, session.sid);
+    res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions);
+  }
+  return res;
 }
 
 export const config = {
